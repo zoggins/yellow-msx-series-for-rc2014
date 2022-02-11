@@ -17,7 +17,7 @@ release-notes:
 	@rm -rf ./release
 	mkdir -p ./release
 	version=$$(date +%y-%m-%d)
-	last_release=$$(gh release list --limit 1 | grep Latest | cut -f1 | tr -d \")
+	last_release=$$(gh release list --limit 10 | grep Latest | cut -f1 | tr -d \")
 	echo -e $${last_release}
 	relfile=./release/release-$${version}.md
 	rm -f $${relfile}
@@ -28,14 +28,18 @@ release-notes:
 
 .PHONY: release
 release: release-build release-notes
-	version=$$(date +%y-%m-%d)
+	@version=$$(date +%y-%m-%d)
 	$(MAKE) release -C msx --no-print-directory
 	$(MAKE) release -C apps-rc2014 --no-print-directory
-	gh release create --draft -F ./release/release-$${version}.md -t \"$${version}\" $${version} release/*
+	if gh release list | grep Draft; then
+		current_draft_release=$$(gh release list | grep Draft | cut -f3 | head -n1)
+		gh release delete --yes $${current_draft_release}
+	fi
+	gh release create --draft -F ./release/release-$${version}.md -t "$${version}" $${version} release/*
 
 .PHONY: release-build
 release-build:
-	version=$$(date +%Y-%m-%d)
+	@version=$$(date +%Y-%m-%d)
 	$(MAKE) -C msx clean
 	echo -e "INFO_S:			DB	10, \"MSX ON RC2014 ($${version})\", 13, 10\r\n" > "./msx/nextor/source/kernel/drivers/rc2014/version.mac"
 	RELEASE=true $(MAKE) -C msx jeds
